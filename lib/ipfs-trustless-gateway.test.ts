@@ -4,6 +4,10 @@ export const testConfig = {
     runOnAll: false,
 }
 
+// Skip in CI - these tests depend on external public IPFS gateways (dweb.link)
+// which can be unreliable and return 5xx errors
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
 import * as bunTest from 'bun:test';
 import { run } from 't44/standalone-rt';
 import { CID, IPFSClient, IPFSConnection } from './ipfs';
@@ -39,7 +43,7 @@ const {
     importMeta: import.meta
 });
 
-describe('IPFSClient - Trustless Gateway', () => {
+(isCI ? describe.skip : describe)('IPFSClient - Trustless Gateway', () => {
     let trustlessClient: any;
     let localClient: any;
     let testCid: CID;
