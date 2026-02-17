@@ -1,5 +1,8 @@
 #!/usr/bin/env bun test
 
+// Skip liveClient tests in CI - requires local IPFS daemon on port 5001
+const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
 import * as bunTest from 'bun:test'
 import { run } from 't44/standalone-rt'
 
@@ -244,7 +247,7 @@ describe('IpfsWorkbench', function () {
 
     describe('9. Basic IPFS read/write per client', function () {
 
-        it('should store and retrieve a block via liveClient', async function () {
+        (isCI ? it.skip : it)('should store and retrieve a block via liveClient', async function () {
             const client = ipfs.liveClient
             const data = new TextEncoder().encode('IpfsWorkbench live test')
             const hash = await client.hasher.digest(data)
