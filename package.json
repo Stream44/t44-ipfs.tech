@@ -1,0 +1,27 @@
+{
+    "name": "@stream44.studio/t44-ipfs.tech",
+    "version": "0.2.0-rc.3",
+    "license": "BSD-2-Clause-Patent",
+    "type": "module",
+    "scripts": {
+        "test": "bun test"
+    },
+    "dependencies": {
+        "t44": "^0.4.0-rc.14",
+        "@stream44.studio/encapsulate": "^0.4.0-rc.13",
+        "@ipld/car": "^5.4.2",
+        "@ipld/dag-cbor": "^9.2.5",
+        "@ipld/dag-json": "^10.2.5",
+        "@ipld/dag-pb": "^4.1.5",
+        "@libp2p/crypto": "^5.1.12",
+        "@noble/curves": "^2.0.1",
+        "ipfs-unixfs-exporter": "^13.7.3",
+        "ipfs-unixfs-importer": "^15.4.0",
+        "multiformats": "^13.4.1"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.3.4",
+        "@types/node": "^25.0.3",
+        "bun-types": "^1.3.4"
+    }
+}
