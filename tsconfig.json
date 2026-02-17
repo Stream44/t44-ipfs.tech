@@ -1,0 +1,28 @@
+{
+    "extends": "../../../tsconfig.paths.json",
+    "compilerOptions": {
+        "target": "es2021",
+        "module": "esnext",
+        "lib": [
+            "ES2021",
+            "DOM"
+        ],
+        "types": [
+            "bun",
+            "node"
+        ],
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "allowSyntheticDefaultImports": true
+    },
+    "include": [
+        "**/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

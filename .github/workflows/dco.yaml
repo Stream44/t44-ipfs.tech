@@ -1,0 +1,12 @@
+name: DCO Signatures
+on: [push, pull_request]
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: Stream44/dco@main
+        with:
+          enforceSignatureFingerprints: true
