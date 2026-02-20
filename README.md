@@ -9,10 +9,8 @@
 
 This project [encapsulates](https://github.com/Stream44/encapsulate) various [IPFS](https://ipfs.tech/) javascript libraries for use in [t44](https://github.com/Stream44/t44).
 
-IPFS low-level libraries are wrapped into capsules and combined into new higher order capsules.
 
-
-Capsules: Higher Order
+Capsules
 ---
 
 ### `IpfsWorkbench`
@@ -20,7 +18,7 @@ Capsules: Higher Order
 Provides IPFS server management and client APIs for use in Test Driven Development (TDD). Uses `ipfs` capsule.
 
 
-Capsules: Low Level
+Libraries
 ---
 
 ### `ipfs` (IPFS Server & CLient)
@@ -41,8 +39,8 @@ Repository DID: `did:repo:3057fddfce16cbc282f4c20568c1dd1fdd150de5`
     <td><img src=".o/GordianOpenIntegrity-InceptionLifehash.svg" width="64" height="64"></td>
     <td><strong>Current Mark</strong></td>
     <td><img src=".o/GordianOpenIntegrity-CurrentLifehash.svg" width="64" height="64"></td>
-    <td>Trust established using<br/><a href="https://github.com/Stream44/t44-ipfs.tech">Stream44/t44-ipfs.tech</a></td>
+    <td>Trust established using<br/><a href="https://github.com/Stream44/t44-blockchaincommons.com">Stream44/t44-BlockchainCommons.com</a></td>
   </tr>
 </table>
 
-(c) 2026 [Christoph.diy](https://christoph.diy) • Code: `BSD-2-Clause-Patent` • Text: `CC-BY` • Created with [Stream44.Studio](https://Stream44.Studio)
+(c) 2026 [Christoph.diy](https://christoph.diy) • Code: `MIT` • Text: `CC-BY` • Created with [Stream44.Studio](https://Stream44.Studio)
