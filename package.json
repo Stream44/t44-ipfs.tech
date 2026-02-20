@@ -1,14 +1,14 @@
 {
     "name": "@stream44.studio/t44-ipfs.tech",
-    "version": "0.2.0-rc.5",
+    "version": "0.2.0-rc.6",
     "license": "MIT",
     "type": "module",
     "scripts": {
         "test": "bun test"
     },
     "dependencies": {
-        "t44": "^0.4.0-rc.16",
-        "@stream44.studio/encapsulate": "^0.4.0-rc.17",
+        "t44": "^0.4.0-rc.17",
+        "@stream44.studio/encapsulate": "^0.4.0-rc.19",
         "@ipld/car": "^5.4.2",
         "@ipld/dag-cbor": "^9.2.5",
         "@ipld/dag-json": "^10.2.5",
