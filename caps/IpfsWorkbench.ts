@@ -18,7 +18,7 @@ export async function capsule({
             '#': {
                 test: {
                     type: CapsulePropertyTypes.Mapping,
-                    value: 't44/caps/WorkspaceTest',
+                    value: 't44/caps/ProjectTest',
                 },
 
                 CID: {

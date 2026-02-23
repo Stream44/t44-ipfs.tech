@@ -16,7 +16,7 @@ const {
             '#': {
                 test: {
                     type: CapsulePropertyTypes.Mapping,
-                    value: 't44/caps/WorkspaceTest',
+                    value: 't44/caps/ProjectTest',
                     options: {
                         '#': {
                             bunTest,
@@ -248,6 +248,16 @@ describe('IpfsWorkbench', function () {
     describe('9. Basic IPFS read/write per client', function () {
 
         (isCI ? it.skip : it)('should store and retrieve a block via liveClient', async function () {
+            const isRunning = await fetch('http://127.0.0.1:5001/api/v0/id', { method: 'POST' })
+                .then(r => r.ok).catch(() => false)
+            if (!isRunning) {
+                throw new Error(
+                    'Live IPFS daemon is not running on port 5001.\n' +
+                    'Start it with: brew services start ipfs\n' +
+                    'Or: ipfs daemon &'
+                )
+            }
+
             const client = ipfs.liveClient
             const data = new TextEncoder().encode('IpfsWorkbench live test')
             const hash = await client.hasher.digest(data)

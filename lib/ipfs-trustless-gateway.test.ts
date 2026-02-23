@@ -22,7 +22,7 @@ const {
             '#': {
                 test: {
                     type: CapsulePropertyTypes.Mapping,
-                    value: 't44/caps/WorkspaceTest',
+                    value: 't44/caps/ProjectTest',
                     options: { '#': { bunTest, env: {} } }
                 },
                 ipfs: {
