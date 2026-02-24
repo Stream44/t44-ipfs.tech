@@ -1,5 +1,4 @@
 {
-    "extends": "../../../tsconfig.paths.json",
     "compilerOptions": {
         "target": "es2021",
         "module": "esnext",
