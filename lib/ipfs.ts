@@ -1703,19 +1703,40 @@ export class IPFSServer extends IPFSClient {
             }
             this.debug(`✓ Key exists in daemon keystore: ${name} (${keyExists.Id})`);
 
-            this.debug(`Exporting key from repo: ${this.ipfsRepoPath}`);
+            // Query the daemon for its actual repo path via /api/v0/repo/stat.
+            // We cannot rely on this.ipfsRepoPath because the daemon on this port
+            // may have been started by a different package with a different repo.
+            let actualRepoPath = this.ipfsRepoPath;
+            try {
+                const repoStatResp = await fetch(`${this.connection.rpcUrl}/api/v0/repo/stat`, { method: 'POST' });
+                if (repoStatResp.ok) {
+                    const repoStat = await repoStatResp.json() as { RepoPath?: string };
+                    if (repoStat.RepoPath) {
+                        if (repoStat.RepoPath !== this.ipfsRepoPath) {
+                            this.debug(`⚠️ Daemon repo path differs from configured path:`);
+                            this.debug(`   Daemon:     ${repoStat.RepoPath}`);
+                            this.debug(`   Configured: ${this.ipfsRepoPath}`);
+                        }
+                        actualRepoPath = repoStat.RepoPath;
+                    }
+                }
+            } catch (e) {
+                this.debug(`Could not query daemon repo/stat, using configured path`);
+            }
+
+            this.debug(`Exporting key from repo: ${actualRepoPath}`);
 
             // Verify repo directory exists
-            if (!await exists(`${this.ipfsRepoPath}/config`)) {
-                throw new Error(`IPFS repo does not exist at: ${this.ipfsRepoPath}`);
+            if (!await exists(`${actualRepoPath}/config`)) {
+                throw new Error(`IPFS repo does not exist at: ${actualRepoPath}`);
             }
-            this.debug(`✓ Repo directory exists: ${this.ipfsRepoPath}`);
+            this.debug(`✓ Repo directory exists: ${actualRepoPath}`);
 
             // Export to a temporary directory (ipfs key export writes to current directory by default)
             const tmpDir = `/tmp/ipfs-key-export-${Date.now()}`;
             await Bun.$`mkdir -p ${tmpDir}`.quiet();
 
-            const env = this.getEnv();
+            const env = { ...process.env, IPFS_PATH: actualRepoPath };
             const proc = Bun.spawn(['ipfs', 'key', 'export', '--format=pem-pkcs8-cleartext', name], {
                 stdout: 'pipe',
                 stderr: 'pipe',
