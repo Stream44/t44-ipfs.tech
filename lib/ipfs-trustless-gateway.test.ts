@@ -9,7 +9,7 @@ export const testConfig = {
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
 
 import * as bunTest from 'bun:test';
-import { run } from 't44/standalone-rt';
+import { run } from '@stream44.studio/t44/standalone-rt';
 import { CID, IPFSClient, IPFSConnection } from './ipfs';
 
 const {
@@ -22,7 +22,7 @@ const {
             '#': {
                 test: {
                     type: CapsulePropertyTypes.Mapping,
-                    value: 't44/caps/ProjectTest',
+                    value: '@stream44.studio/t44/caps/ProjectTest',
                     options: { '#': { bunTest, env: {} } }
                 },
                 ipfs: {
