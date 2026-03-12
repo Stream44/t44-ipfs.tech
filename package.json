@@ -7,8 +7,8 @@
         "test": "bun test"
     },
     "dependencies": {
-        "@stream44.studio/t44": "^0.4.0-rc.34",
-        "@stream44.studio/encapsulate": "^0.4.0-rc.32",
+        "@stream44.studio/t44": "^0.4.0-rc.35",
+        "@stream44.studio/encapsulate": "^0.4.0-rc.34",
         "@ipld/car": "^5.4.2",
         "@ipld/dag-cbor": "^9.2.5",
         "@ipld/dag-json": "^10.2.5",
