@@ -83,7 +83,17 @@ export async function capsule({
                     type: CapsulePropertyTypes.GetterFunction,
                     value: function (this: any): IPFSClient {
                         const connection = this.testOnlineConnection
-                        const client = new IPFSClient({ connection })
+                        const self = this
+                        const client = new IPFSClient({
+                            connection,
+                            onError: async (error) => {
+                                if (error.status === 500) {
+                                    console.log(`[IpfsWorkbench] 500 error on ${error.operation}, restarting online IPFS server...`)
+                                    return self._restartServer('online')
+                                }
+                                return false
+                            }
+                        })
 
                         client.on('cid:pinned', (cid: string) => {
                             this.cids.set(cid, true)
@@ -100,8 +110,19 @@ export async function capsule({
                         const connection = this.testOnlineConnection
                         const cacheDir = await this.ensureCacheDir()
                         const ipfsRepoPath = join(cacheDir, `.~ipldom-ipfs-test-online-${connection.gatewayPort}-repo`)
+                        const self = this
 
-                        const server = new IPFSServer({ connection: connection, ipfsRepoPath: ipfsRepoPath })
+                        const server = new IPFSServer({
+                            connection: connection,
+                            ipfsRepoPath: ipfsRepoPath,
+                            onError: async (error) => {
+                                if (error.status === 500) {
+                                    console.log(`[IpfsWorkbench] 500 error on ${error.operation}, restarting online IPFS server...`)
+                                    return self._restartServer('online')
+                                }
+                                return false
+                            }
+                        })
 
                         server.on('mfs:created', (mfsPath: string) => {
                             this.mfsPaths.set(mfsPath, true)
@@ -131,7 +152,17 @@ export async function capsule({
                     type: CapsulePropertyTypes.GetterFunction,
                     value: function (this: any): IPFSClient {
                         const connection = this.testOfflineConnection
-                        const client = new IPFSClient({ connection })
+                        const self = this
+                        const client = new IPFSClient({
+                            connection,
+                            onError: async (error) => {
+                                if (error.status === 500) {
+                                    console.log(`[IpfsWorkbench] 500 error on ${error.operation}, restarting offline IPFS server...`)
+                                    return self._restartServer('offline')
+                                }
+                                return false
+                            }
+                        })
 
                         client.on('cid:pinned', (cid: string) => {
                             this.cids.set(cid, true)
@@ -148,8 +179,19 @@ export async function capsule({
                         const connection = this.testOfflineConnection
                         const cacheDir = await this.ensureCacheDir()
                         const ipfsRepoPath = join(cacheDir, `.~ipldom-ipfs-test-offline-${connection.gatewayPort}-repo`)
+                        const self = this
 
-                        const server = new IPFSServer({ connection: connection, ipfsRepoPath: ipfsRepoPath })
+                        const server = new IPFSServer({
+                            connection: connection,
+                            ipfsRepoPath: ipfsRepoPath,
+                            onError: async (error) => {
+                                if (error.status === 500) {
+                                    console.log(`[IpfsWorkbench] 500 error on ${error.operation}, restarting offline IPFS server...`)
+                                    return self._restartServer('offline')
+                                }
+                                return false
+                            }
+                        })
 
                         server.on('mfs:created', (mfsPath: string) => {
                             this.mfsPaths.set(mfsPath, true)
@@ -169,6 +211,32 @@ export async function capsule({
                         // If in test mode, start both test servers if not already running
                         if (this.test && this.test.bunTest) {
                             await this.startTestServers()
+                        }
+                    }
+                },
+
+                _restartServer: {
+                    type: CapsulePropertyTypes.Function,
+                    value: async function (this: any, which: 'online' | 'offline'): Promise<boolean> {
+                        try {
+                            const server = await (which === 'online' ? this.testOnlineServer : this.testOfflineServer)
+                            console.log(`[IpfsWorkbench] Stopping ${which} IPFS server...`)
+                            await server.stop().catch(() => { })
+
+                            // Remove the corrupted repo and let start() re-init
+                            const repoPath = server.getRepoPath()
+                            if (repoPath) {
+                                console.log(`[IpfsWorkbench] Removing corrupted repo: ${repoPath}`)
+                                await rm(repoPath, { recursive: true, force: true }).catch(() => { })
+                            }
+
+                            console.log(`[IpfsWorkbench] Restarting ${which} IPFS server...`)
+                            await server.start()
+                            console.log(`[IpfsWorkbench] ✅ ${which} IPFS server restarted successfully`)
+                            return true
+                        } catch (error) {
+                            console.error(`[IpfsWorkbench] Failed to restart ${which} IPFS server:`, error)
+                            return false
                         }
                     }
                 },

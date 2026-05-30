@@ -16,6 +16,21 @@ import { privateKeyFromPem } from './utils';
 // Re-export utility functions
 export { privateKeyFromPem, CID };
 
+function ipfsDaemonHint(status: number, rpcUrl: string): string {
+    if (status !== 500) return '';
+    const isMac = process.platform === 'darwin';
+    return (
+        `\n\n` +
+        `  The IPFS daemon at ${rpcUrl} returned HTTP 500, which usually means\n` +
+        `  the daemon is in a bad state and needs to be restarted.\n` +
+        (isMac
+            ? `\n  If installed via Homebrew:\n` +
+              `    brew services restart ipfs\n`
+            : `\n  Restart the daemon:\n` +
+              `    ipfs shutdown && ipfs daemon &\n`)
+    );
+}
+
 // IPFS HTTP API configuration
 const IPFS_API_URL = process.env.IPFS_API_URL || 'http://localhost:5001';
 
@@ -84,6 +99,7 @@ export interface UploadOptions {
 export interface ClientOptions {
     connection: IPFSConnection;
     verbose?: boolean;
+    onError?: (error: { status: number; message: string; operation: string }) => Promise<boolean>;
 }
 
 /**
@@ -93,6 +109,7 @@ export interface ServerOptions {
     connection: IPFSConnection;
     ipfsRepoPath: string; // Required IPFS repo path for key export/import operations
     verbose?: boolean;
+    onError?: (error: { status: number; message: string; operation: string }) => Promise<boolean>;
 }
 
 
@@ -196,12 +213,14 @@ export class IPFSClient extends EventEmitter {
 
     protected connection: IPFSConnection;
     protected verbose: boolean;
+    protected onError?: (error: { status: number; message: string; operation: string }) => Promise<boolean>;
     public hasher = sha256; // Use SHA-256 hasher (widely supported)
 
-    constructor({ connection, verbose = false }: ClientOptions) {
+    constructor({ connection, verbose = false, onError }: ClientOptions) {
         super();
         this.connection = connection;
         this.verbose = verbose;
+        this.onError = onError;
     }
 
     protected debug(...args: any[]) {
@@ -249,13 +268,19 @@ export class IPFSClient extends EventEmitter {
      * Store a block in the local IPFS node using the block/put API
      */
     async putBlock(cid: CID, block: Uint8Array): Promise<CID> {
+        return this._putBlockAttempt(cid, block, true);
+    }
+
+    private async _putBlockAttempt(cid: CID, block: Uint8Array, allowRetry: boolean): Promise<CID> {
         const formData = new FormData();
         formData.append('file', new Blob([block]), 'block');
 
         const url = `${this.connection.rpcUrl}/api/v0/block/put?allow-big-block=true`;
         const headers = this.getHeaders();
         if (this.verbose) {
-            console.log(`[IPFSClient.putBlock] Storing block ${cid.toString()}`);
+            console.log(`[IPFSClient.putBlock] Storing block ${cid.toString()} (${block.byteLength} bytes) at ${this.connection.rpcUrl}`);
+        }
+        if (this.verbose) {
             console.log(`[IPFSClient.putBlock] URL: ${url}`);
             console.log(`[IPFSClient.putBlock] Headers:`, Object.keys(headers));
         }
@@ -269,7 +294,14 @@ export class IPFSClient extends EventEmitter {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Failed to store block in IPFS: ${response.status} - ${errorText}`);
+            if (allowRetry && response.status === 500 && this.onError) {
+                const shouldRetry = await this.onError({ status: response.status, message: errorText, operation: 'putBlock' });
+                if (shouldRetry) {
+                    return this._putBlockAttempt(cid, block, false);
+                }
+            }
+            const hint = ipfsDaemonHint(response.status, this.connection.rpcUrl);
+            throw new Error(`Failed to store block in IPFS: ${response.status} - ${errorText}${hint}`);
         }
 
         await response.json();
@@ -290,54 +322,34 @@ export class IPFSClient extends EventEmitter {
         // This works in offline mode, unlike the gateway which requires network access
         const url = `${this.connection.rpcUrl}/api/v0/block/get?arg=${cid.toString()}`;
         const headers = this.getHeaders();
-        const maxRetries = 3;
-        const retryDelay = 3000; // 3 seconds
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            if (this.verbose && attempt === 1) {
-                console.log(`[IPFSClient.getBlock] Fetching block ${cid.toString()}`);
-                console.log(`[IPFSClient.getBlock] URL: ${url}`);
-                console.log(`[IPFSClient.getBlock] Headers:`, Object.keys(headers));
-            }
-
-            const response = await fetch(url, {
-                method: 'POST',
-                headers,
-            });
-
-            if (response.ok) {
-                const arrayBuffer = await response.arrayBuffer();
-                if (this.verbose) {
-                    console.log(`[IPFSClient.getBlock] ✅ Retrieved ${arrayBuffer.byteLength} bytes`);
-                }
-                return new Uint8Array(arrayBuffer);
-            }
-
-            // Don't retry on 404 - block doesn't exist
-            if (response.status === 404) {
-                const errorText = await response.text();
-                console.error(`[IPFSClient.getBlock] ❌ Failed: HTTP ${response.status}`);
-                console.error(`[IPFSClient.getBlock] Error body:`, errorText.substring(0, 500));
-                throw new Error(`Failed to retrieve block from IPFS: ${response.status} - ${errorText}`);
-            }
-
-            // Log error and retry for other status codes
-            const errorText = await response.text();
-            console.error(`[IPFSClient.getBlock] ❌ Attempt ${attempt}/${maxRetries} failed: HTTP ${response.status}`);
-
-            if (attempt === maxRetries) {
-                // Final attempt failed - log full error with URL
-                console.error(`[IPFSClient.getBlock] ❌ All ${maxRetries} attempts failed for URL: ${url}`);
-                console.error(`[IPFSClient.getBlock] Error body:`, errorText.substring(0, 500));
-                throw new Error(`Failed to retrieve block from IPFS: ${response.status} - ${errorText}`);
-            }
-
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        if (this.verbose) {
+            console.log(`[IPFSClient.getBlock] Fetching block ${cid.toString()} from ${this.connection.rpcUrl}`);
         }
 
-        // This should never be reached, but TypeScript needs it
-        throw new Error(`Failed to retrieve block from IPFS after ${maxRetries} attempts`);
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+        });
+
+        if (response.ok) {
+            const arrayBuffer = await response.arrayBuffer();
+            if (this.verbose) {
+                console.log(`[IPFSClient.getBlock] ✅ Retrieved ${arrayBuffer.byteLength} bytes`);
+            }
+            return new Uint8Array(arrayBuffer);
+        }
+
+        const errorText = await response.text();
+
+        // Kubo returns HTTP 500 (not 404) for missing blocks in offline mode.
+        // Detect this case from the error message and rethrow as a clear "not found".
+        if (response.status === 500 && errorText.includes('not found locally (offline)')) {
+            throw new Error(`[IPFSClient.getBlock] Block not found (offline): ${cid.toString()}`);
+        }
+
+        const hint = ipfsDaemonHint(response.status, this.connection.rpcUrl);
+        throw new Error(`[IPFSClient.getBlock] HTTP ${response.status} for ${cid.toString()} at ${url}\n  ${errorText.substring(0, 500)}${hint}`);
     }
 
     /**
@@ -575,7 +587,8 @@ export class IPFSClient extends EventEmitter {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to get IPFS version: ${response.status}`);
+            const hint = ipfsDaemonHint(response.status, this.connection.rpcUrl);
+            throw new Error(`Failed to get IPFS version: ${response.status}${hint}`);
         }
 
         return await response.json();
@@ -1356,8 +1369,8 @@ export class IPFSServer extends IPFSClient {
     protected ipfsRepoPath: string;
     protected process: any;
 
-    constructor({ connection, ipfsRepoPath = '', verbose = false }: ServerOptions) {
-        super({ connection, verbose });
+    constructor({ connection, ipfsRepoPath = '', verbose = false, onError }: ServerOptions) {
+        super({ connection, verbose, onError });
         this.ipfsRepoPath = ipfsRepoPath;
     }
 

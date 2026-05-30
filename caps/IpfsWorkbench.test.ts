@@ -279,7 +279,7 @@ describe('IpfsWorkbench', function () {
             const retrieved = await client.getBlock(cid)
 
             expect(new Uint8Array(retrieved)).toEqual(data)
-        })
+        }, 30000)
 
         it('should store and retrieve a block via testOfflineClient', async function () {
             const client = ipfs.testOfflineClient
@@ -291,7 +291,7 @@ describe('IpfsWorkbench', function () {
             const retrieved = await client.getBlock(cid)
 
             expect(new Uint8Array(retrieved)).toEqual(data)
-        })
+        }, 30000)
     })
 
 })
